@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Leave Tracker – Amazon GR Tech</title>
+
+  <!-- ══════════════════════════════════════════
+       FIREBASE SDK  (v9 compat mode)
+  ══════════════════════════════════════════ -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',sans-serif;background:#f0f4f8;color:#333}
+
+    /* NAV */
+    header{background:linear-gradient(135deg,#1a237e,#283593);color:#fff;
+           padding:16px 32px;display:flex;align-items:center;
+           justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+    header h1{font-size:1.4rem;letter-spacing:1px}
+    .conn-dot{width:10px;height:10px;border-radius:50%;background:#ef5350;
+              display:inline-block;margin-right:6px;transition:background .4s}
+    .conn-dot.online{background:#66bb6a}
+    #conn-label{font-size:.8rem;opacity:.9}
+
+    /* TABS */
+    .tabs{display:flex;background:#fff;border-bottom:2px solid #e0e0e0;padding:0 32px}
+    .tab-btn{padding:14px 26px;border:none;background:none;font-size:.9rem;
+             font-weight:600;color:#666;cursor:pointer;border-bottom:3px solid transparent;
+             transition:all .2s}
+    .tab-btn.active{color:#1a237e;border-bottom:3px solid #1a237e}
+
+    /* SECTIONS */
+    .section{display:none;padding:28px 32px}
+    .section.active{display:block}
+
+    /* CARDS */
+    .card{background:#fff;border-radius:12px;padding:24px 28px;
+          box-shadow:0 2px 12px rgba(0,0,0,.07);margin-bottom:22px}
+    .card h2{font-size:1rem;color:#1a237e;margin-bottom:18px;
+             border-left:4px solid #1a237e;padding-left:10px}
+
+    /* FORM */
+    .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+               gap:14px;align-items:end}
+    .fg label{display:block;font-size:.75rem;font-weight:700;color:#555;
+              margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+    .fg input,.fg select{width:100%;padding:10px 12px;border:1.5px solid #ddd;
+                         border-radius:8px;font-size:.88rem;background:#fafafa;
+                         transition:border .2s}
+    .fg input:focus,.fg select:focus{outline:none;border-color:#1a237e;background:#fff}
+    .btn-add{padding:10px 22px;background:#1a237e;color:#fff;border:none;
+             border-radius:8px;font-size:.88rem;font-weight:700;cursor:pointer;
+             transition:background .2s;height:42px;width:100%}
+    .btn-add:hover{background:#283593}
+    .btn-add:disabled{background:#9fa8da;cursor:not-allowed}
+    #form-error{color:#e53935;font-size:.8rem;margin-top:8px;min-height:16px}
+
+    /* TABLE */
+    .tbl-wrap{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;font-size:.85rem}
+    thead tr{background:#1a237e;color:#fff}
+    th{padding:11px 13px;text-align:left;font-weight:600;letter-spacing:.3px}
+    tbody tr{border-bottom:1px solid #f0f0f0;transition:background .15s}
+    tbody tr:hover{background:#f5f7ff}
+    td{padding:10px 13px}
+
+    .badge{display:inline-block;padding:3px 10px;border-radius:20px;
+           font-size:.72rem;font-weight:700}
+    .b-Sick      {background:#fce4ec;color:#c62828}
+    .b-Casual    {background:#fff3e0;color:#e65100}
+    .b-Vacation  {background:#e8f5e9;color:#2e7d32}
+    .b-Personal  {background:#e3f2fd;color:#1565c0}
+    .b-Emergency {background:#f3e5f5;color:#6a1b9a}
+
+    .btn-del{background:none;border:none;color:#e53935;cursor:pointer;
+             font-size:.95rem;padding:2px 7px;border-radius:4px;transition:background .15s}
+    .btn-del:hover{background:#fce4ec}
+
+    tfoot tr td{font-weight:700;color:#1a237e;background:#e8eaf6;font-size:.88rem}
+
+    /* DASHBOARD */
+    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+              gap:16px;margin-bottom:22px}
+    .kpi{background:#fff;border-radius:12px;padding:18px 20px;
+         box-shadow:0 2px 10px rgba(0,0,0,.07);border-top:4px solid;text-align:center}
+    .kpi.c1{border-color:#1a237e}.kpi.c2{border-color:#c62828}
+    .kpi.c3{border-color:#e65100}.kpi.c4{border-color:#2e7d32}
+    .kpi.c5{border-color:#6a1b9a}.kpi.c6{border-color:#00838f}
+    .kpi-num{font-size:2rem;font-weight:800;color:#1a237e;line-height:1;margin-bottom:5px}
+    .kpi-lbl{font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;
+             color:#666;font-weight:600}
+
+    /* BAR CHART */
+    .chart-outer{overflow-x:auto}
+    .chart-area{display:flex;align-items:flex-end;gap:12px;height:160px;
+                padding-bottom:0;border-bottom:2px solid #e0e0e0;min-width:300px}
+    .bar-wrap{display:flex;flex-direction:column;align-items:center;flex:1;min-width:50px}
+    .bar{width:80%;max-width:50px;background:linear-gradient(180deg,#5c6bc0,#1a237e);
+         border-radius:6px 6px 0 0;position:relative;min-height:4px;transition:height .4s}
+    .bar-val{position:absolute;top:-20px;width:100%;text-align:center;
+             font-size:.72rem;font-weight:700;color:#1a237e}
+    .bar-lbl{font-size:.68rem;color:#666;margin-top:5px;text-align:center;
+             word-break:break-all;max-width:60px}
+
+    /* PROGRESS */
+    .prog-wrap{background:#e9ecef;border-radius:20px;height:9px;
+               width:100%;overflow:hidden;margin-top:3px}
+    .prog-bar{height:100%;border-radius:20px;
+              background:linear-gradient(90deg,#1a237e,#5c6bc0);transition:width .4s}
+
+    /* FILTER */
+    .frow{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+    .frow label{font-size:.78rem;font-weight:600;color:#555}
+    .frow select,.frow input{padding:7px 11px;border:1.5px solid #ddd;
+                              border-radius:8px;font-size:.82rem}
+
+    .no-data{text-align:center;color:#aaa;padding:28px 0;font-style:italic}
+
+    /* LOADER */
+    .spinner{display:inline-block;width:18px;height:18px;border:3px solid #c5cae9;
+             border-top-color:#1a237e;border-radius:50%;animation:spin .7s linear infinite;
+             margin-right:8px;vertical-align:middle}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* TOAST */
+    #toast{position:fixed;bottom:28px;right:28px;background:#323232;color:#fff;
+           padding:12px 22px;border-radius:8px;font-size:.85rem;
+           opacity:0;transition:opacity .3s;pointer-events:none;z-index:999}
+    #toast.show{opacity:1}
+
+    @media(max-width:600px){
+      .section{padding:14px}
+      header{padding:12px 14px}
+      .tabs{padding:0 8px}
+      .tab-btn{padding:10px 12px;font-size:.8rem}
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ HEADER ══ -->
+<header>
+  <h1>🗓️ Leave Tracker &nbsp;<span style="font-size:.8rem;opacity:.7">| Amazon GR Tech</span></h1>
+  <div>
+    <span class="conn-dot" id="conn-dot"></span>
+    <span id="conn-label">Connecting...</span>
+  </div>
+</header>
+
+<!-- ══ TABS ══ -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('entry',this)">📝 Leave Entry</button>
+  <button class="tab-btn"        onclick="switchTab('records',this)">📋 All Records</button>
+  <button class="tab-btn"        onclick="switchTab('dashboard',this)">📊 Manager Dashboard</button>
+</div>
+
+<!-- ════════════════════════════════════════════
+     TAB 1 — LEAVE ENTRY
+════════════════════════════════════════════ -->
+<div id="tab-entry" class="section active">
+
+  <div class="card">
+    <h2>➕ Add New Leave Entry</h2>
+    <div class="form-grid">
+      <div class="fg">
+        <label>Auditor Name</label>
+        <input id="inp-name" type="text" placeholder="e.g. Ruthwick K."/>
+      </div>
+      <div class="fg">
+        <label>Leave Type</label>
+        <select id="inp-type">
+          <option value="">-- Select Type --</option>
+          <option>Sick</option>
+          <option>Casual</option>
+          <option>Vacation</option>
+          <option>Personal</option>
+          <option>Emergency</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Start Date</label>
+        <input id="inp-start" type="date"/>
+      </div>
+      <div class="fg">
+        <label>End Date</label>
+        <input id="inp-end" type="date"/>
+      </div>
+      <div class="fg">
+        <label>Reason (optional)</label>
+        <input id="inp-reason" type="text" placeholder="Brief reason..."/>
+      </div>
+      <div class="fg">
+        <label>&nbsp;</label>
+        <button class="btn-add" id="btn-submit" onclick="addLeave()">
+          ＋ Submit Leave
+        </button>
+      </div>
+    </div>
+    <p id="form-error"></p>
+  </div>
+
+  <div class="card">
+    <h2>📄 Leave Records</h2>
+    <div class="frow">
+      <label>Filter by Auditor:</label>
+      <select id="fe-auditor" onchange="renderEntryTable()">
+        <option value="">All Auditors</option>
+      </select>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Auditor</th><th>Type</th>
+            <th>Start</th><th>End</th><th>Days</th>
+            <th>Reason</th><th>Delete</th>
+          </tr>
+        </thead>
+        <tbody id="entry-tbody">
+          <tr><td colspan="8" class="no-data">
+            <span class="spinner"></span> Loading from Firebase...
+          </td></tr>
+        </tbody>
+        <tfoot id="entry-tfoot"></tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     TAB 2 — ALL RECORDS
+════════════════════════════════════════════ -->
+<div id="tab-records" class="section">
+  <div class="card">
+    <h2>📋 All Leave Records</h2>
+    <div class="frow">
+      <label>Auditor:</label>
+      <select id="fa-auditor" onchange="renderAllTable()">
+        <option value="">All</option>
+      </select>
+      <label>Type:</label>
+      <select id="fa-type" onchange="renderAllTable()">
+        <option value="">All Types</option>
+        <option>Sick</option><option>Casual</option>
+        <option>Vacation</option><option>Personal</option>
+        <option>Emergency</option>
+      </select>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Auditor</th><th>Type</th>
+            <th>Start</th><th>End</th><th>Days</th><th>Reason</th>
+          </tr>
+        </thead>
+        <tbody id="all-tbody"></tbody>
+        <tfoot id="all-tfoot"></tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     TAB 3 — MANAGER DASHBOARD
+════════════════════════════════════════════ -->
+<div id="tab-dashboard" class="section">
+
+  <!-- KPI CARDS -->
+  <div class="kpi-grid">
+    <div class="kpi c1"><div class="kpi-num" id="k-total">—</div><div class="kpi-lbl">Total Leave Days</div></div>
+    <div class="kpi c2"><div class="kpi-num" id="k-sick">—</div><div class="kpi-lbl">Sick Leaves</div></div>
+    <div class="kpi c3"><div class="kpi-num" id="k-casual">—</div><div class="kpi-lbl">Casual Leaves</div></div>
+    <div class="kpi c4"><div class="kpi-num" id="k-vac">—</div><div class="kpi-lbl">Vacations</div></div>
+    <div class="kpi c5"><div class="kpi-num" id="k-emg">—</div><div class="kpi-lbl">Emergency</div></div>
+    <div class="kpi c6"><div class="kpi-num" id="k-aud">—</div><div class="kpi-lbl">Auditors Tracked</div></div>
+  </div>
+
+  <!-- BAR CHART -->
+  <div class="card">
+    <h2>📊 Leave Days per Auditor</h2>
+    <div class="chart-outer">
+      <div class="chart-area" id="bar-chart">
+        <p class="no-data" style="width:100%">No data yet.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUMMARY TABLE -->
+  <div class="card">
+    <h2>👥 Auditor-wise Summary</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Auditor</th>
+            <th>Sick</th><th>Casual</th><th>Vacation</th>
+            <th>Personal</th><th>Emergency</th>
+            <th>Total</th><th>Progress (max 30 days)</th>
+          </tr>
+        </thead>
+        <tbody id="sum-tbody">
+          <tr><td colspan="9" class="no-data">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- ════════════════════════════════════════════
+     FIREBASE CONFIG — PASTE YOUR KEYS BELOW
+════════════════════════════════════════════ -->
+<script>
+  // ┌─────────────────────────────────────────────────────┐
+  // │  🔥 REPLACE THIS BLOCK WITH YOUR FIREBASE CONFIG   │
+  // └─────────────────────────────────────────────────────┘
+  const firebaseConfig = {
+        apiKey: "AIzaSyAKTR8O8B23Jk5r_e9nvGvbUmftTS_pavw",
+        authDomain: "leave-tracker-6111d.firebaseapp.com",
+        databaseURL: "https://leave-tracker-6111d-default-rtdb.firebaseio.com",
+        projectId: "leave-tracker-6111d",
+        storageBucket: "leave-tracker-6111d.firebasestorage.app",
+        messagingSenderId: "1018389236658",
+        appId: "1:1018389236658:web:9114393f18bf2f96e932ab"
+  };
+
+  // ── INIT FIREBASE ──────────────────────────────────────
+  firebase.initializeApp(firebaseConfig);
+  const db       = firebase.database();
+  const leavesRef = db.ref('leaves');
+
+  // ── CONNECTION STATUS ──────────────────────────────────
+  db.ref('.info/connected').on('value', snap => {
+    const online = snap.val();
+    document.getElementById('conn-dot').className   = 'conn-dot' + (online ? ' online' : '');
+    document.getElementById('conn-label').textContent = online ? 'Live – Firebase Connected' : 'Offline – Reconnecting…';
+  });
+
+  // ══════════════════════════════════════════════════════
+  //  DATA CACHE  (kept in memory, synced from Firebase)
+  // ══════════════════════════════════════════════════════
+  let leaves = {};   // { firebaseKey: {name,type,start,end,reason} }
+
+  // Real-time listener — fires on EVERY change from ANY user
+  leavesRef.on('value', snapshot => {
+    leaves = snapshot.val() || {};
+    refreshDropdowns();
+    renderEntryTable();
+    renderAllTable();
+    renderDashboard();
+  });
+
+  // ══════════════════════════════════════════════════════
+  //  HELPERS
+  // ══════════════════════════════════════════════════════
+  function countDays(s, e) {
+    const sd = new Date(s), ed = new Date(e);
+    if (isNaN(sd)||isNaN(ed)||ed<sd) return 0;
+    return Math.round((ed-sd)/(1000*60*60*24))+1;
+  }
+
+  function fmt(d) {
+    if (!d) return '';
+    return new Date(d).toLocaleDateString('en-GB',
+      {day:'2-digit',month:'short',year:'numeric'});
+  }
+
+  function badge(type) {
+    return `<span class="badge b-${type}">${type}</span>`;
+  }
+
+  function leavesArray() {
+    return Object.entries(leaves).map(([k,v]) => ({key:k,...v}));
+  }
+
+  function getAuditors() {
+    return [...new Set(leavesArray().map(l=>l.name))].sort();
+  }
+
+  function toast(msg, color='#323232') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.style.background = color;
+    el.classList.add('show');
+    setTimeout(()=>el.classList.remove('show'), 3000);
+  }
+
+  function refreshDropdowns() {
+    const auds = getAuditors();
+    ['fe-auditor','fa-auditor'].forEach(id => {
+      const sel = document.getElementById(id);
+      const cur = sel.value;
+      sel.innerHTML = `<option value="">All${id==='fe-auditor'?' Auditors':''}</option>`;
+      auds.forEach(a => {
+        const o = document.createElement('option');
+        o.value = a; o.textContent = a;
+        sel.appendChild(o);
+      });
+      sel.value = cur;
+    });
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  ADD LEAVE  →  pushed to Firebase
+  // ══════════════════════════════════════════════════════
+  function addLeave() {
+    const name   = document.getElementById('inp-name').value.trim();
+    const type   = document.getElementById('inp-type').value;
+    const start  = document.getElementById('inp-start').value;
+    const end    = document.getElementById('inp-end').value;
+    const reason = document.getElementById('inp-reason').value.trim();
+    const errEl  = document.getElementById('form-error');
+
+    if (!name)          { errEl.textContent='⚠ Enter auditor name.'; return; }
+    if (!type)          { errEl.textContent='⚠ Select leave type.'; return; }
+    if (!start||!end)   { errEl.textContent='⚠ Select start and end dates.'; return; }
+    if (new Date(end)<new Date(start)){ errEl.textContent='⚠ End date before start date.'; return; }
+    errEl.textContent = '';
+
+    const btn = document.getElementById('btn-submit');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Saving…';
+
+    // PUSH to Firebase (auto-generates unique key)
+    leavesRef.push({
+      name, type, start, end,
+      reason: reason || '',
+      createdAt: new Date().toISOString()
+    })
+    .then(() => {
+      toast('✅ Leave added successfully!', '#2e7d32');
+      document.getElementById('inp-name').value   = '';
+      document.getElementById('inp-type').value   = '';
+      document.getElementById('inp-start').value  = '';
+      document.getElementById('inp-end').value    = '';
+      document.getElementById('inp-reason').value = '';
+    })
+    .catch(err => {
+      toast('❌ Error: ' + err.message, '#c62828');
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btn.innerHTML = '＋ Submit Leave';
+    });
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  DELETE  →  removed from Firebase
+  // ══════════════════════════════════════════════════════
+  function deleteLeave(key) {
+    if (!confirm('Delete this leave entry?')) return;
+    db.ref('leaves/' + key).remove()
+      .then(()  => toast('🗑 Entry deleted.', '#e65100'))
+      .catch(err => toast('❌ ' + err.message, '#c62828'));
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  RENDER — ENTRY TABLE
+  // ══════════════════════════════════════════════════════
+  function renderEntryTable() {
+    const filter = document.getElementById('fe-auditor').value;
+    let data = leavesArray();
+    if (filter) data = data.filter(l => l.name === filter);
+    data.sort((a,b) => new Date(b.createdAt||0) - new Date(a.createdAt||0));
+
+    const tbody = document.getElementById('entry-tbody');
+    const tfoot = document.getElementById('entry-tfoot');
+
+    if (data.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="8" class="no-data">No records found.</td></tr>`;
+      tfoot.innerHTML = '';
+      return;
+    }
+
+    let total = 0;
+    tbody.innerHTML = data.map((l,i) => {
+      const d = countDays(l.start, l.end);
+      total += d;
+      return `<tr>
+        <td>${i+1}</td>
+        <td><strong>${l.name}</strong></td>
+        <td>${badge(l.type)}</td>
+        <td>${fmt(l.start)}</td>
+        <td>${fmt(l.end)}</td>
+        <td><strong>${d}</strong></td>
+        <td>${l.reason||'—'}</td>
+        <td><button class="btn-del" onclick="deleteLeave('${l.key}')" title="Delete">🗑</button></td>
+      </tr>`;
+    }).join('');
+
+    tfoot.innerHTML = `<tr>
+      <td colspan="5" style="text-align:right;padding-right:14px">📌 Total Leave Days:</td>
+      <td colspan="3"><strong>${total} day${total!==1?'s':''}</strong></td>
+    </tr>`;
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  RENDER — ALL RECORDS TABLE
+  // ══════════════════════════════════════════════════════
+  function renderAllTable() {
+    const fAud  = document.getElementById('fa-auditor').value;
+    const fType = document.getElementById('fa-type').value;
+    let data = leavesArray();
+    if (fAud)  data = data.filter(l => l.name === fAud);
+    if (fType) data = data.filter(l => l.type === fType);
+    data.sort((a,b) => new Date(b.start) - new Date(a.start));
+
+    const tbody = document.getElementById('all-tbody');
+    const tfoot = document.getElementById('all-tfoot');
+
+    if (data.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" class="no-data">No records match the filter.</td></tr>`;
+      tfoot.innerHTML = '';
+      return;
+    }
+
+    let total = 0;
+    tbody.innerHTML = data.map((l,i) => {
+      const d = countDays(l.start, l.end);
+      total += d;
+      return `<tr>
+        <td>${i+1}</td><td>${l.name}</td><td>${badge(l.type)}</td>
+        <td>${fmt(l.start)}</td><td>${fmt(l.end)}</td>
+        <td><strong>${d}</strong></td><td>${l.reason||'—'}</td>
+      </tr>`;
+    }).join('');
+
+    tfoot.innerHTML = `<tr>
+      <td colspan="5" style="text-align:right;padding-right:14px">📌 Total:</td>
+      <td colspan="2"><strong>${total} days</strong></td>
+    </tr>`;
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  RENDER — MANAGER DASHBOARD
+  // ══════════════════════════════════════════════════════
+  function renderDashboard() {
+    const types    = ['Sick','Casual','Vacation','Personal','Emergency'];
+    const auditors = getAuditors();
+    const all      = leavesArray();
+
+    const sum = t => all.filter(l=>l.type===t).reduce((s,l)=>s+countDays(l.start,l.end),0);
+
+    document.getElementById('k-total').textContent  = all.reduce((s,l)=>s+countDays(l.start,l.end),0);
+    document.getElementById('k-sick').textContent   = sum('Sick');
+    document.getElementById('k-casual').textContent = sum('Casual');
+    document.getElementById('k-vac').textContent    = sum('Vacation');
+    document.getElementById('k-emg').textContent    = sum('Emergency');
+    document.getElementById('k-aud').textContent    = auditors.length;
+
+    // BAR CHART
+    const bc = document.getElementById('bar-chart');
+    if (auditors.length === 0) {
+      bc.innerHTML = `<p class="no-data" style="width:100%">No data yet.</p>`;
+    } else {
+      const vals   = auditors.map(a => all.filter(l=>l.name===a).reduce((s,l)=>s+countDays(l.start,l.end),0));
+      const maxVal = Math.max(...vals, 1);
+      bc.innerHTML = auditors.map((a,i) => {
+        const h = Math.max(Math.round((vals[i]/maxVal)*140), 4);
+        return `<div class="bar-wrap">
+          <div class="bar" style="height:${h}px">
+            <span class="bar-val">${vals[i]}</span>
+          </div>
+          <div class="bar-lbl">${a.split(' ')[0]}</div>
+        </div>`;
+      }).join('');
+    }
+
+    // SUMMARY TABLE
+    const tbody = document.getElementById('sum-tbody');
+    if (auditors.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="9" class="no-data">No leave data yet.</td></tr>`;
+      return;
+    }
+
+    let grand = 0;
+    tbody.innerHTML = auditors.map((a,i) => {
+      const row    = all.filter(l=>l.name===a);
+      const byType = {};
+      types.forEach(t => byType[t] = row.filter(l=>l.type===t).reduce((s,l)=>s+countDays(l.start,l.end),0));
+      const tot    = Object.values(byType).reduce((s,v)=>s+v,0);
+      grand       += tot;
+      const pct    = Math.min(Math.round((tot/30)*100),100);
+      return `<tr>
+        <td>${i+1}</td>
+        <td><strong>${a}</strong></td>
+        <td>${byType['Sick']}</td>
+        <td>${byType['Casual']}</td>
+        <td>${byType['Vacation']}</td>
+        <td>${byType['Personal']}</td>
+        <td>${byType['Emergency']}</td>
+        <td><strong>${tot}</strong></td>
+        <td style="min-width:140px">
+          <div class="prog-wrap"><div class="prog-bar" style="width:${pct}%"></div></div>
+          <span style="font-size:.68rem;color:#666">${tot}/30 days</span>
+        </td>
+      </tr>`;
+    }).join('') + `<tr>
+      <td colspan="7" style="text-align:right;font-weight:700;background:#e8eaf6;color:#1a237e;padding-right:14px">
+        📌 Grand Total:
+      </td>
+      <td colspan="2" style="font-weight:700;background:#e8eaf6;color:#1a237e">
+        ${grand} days across ${auditors.length} auditor${auditors.length!==1?'s':''}
+      </td>
+    </tr>`;
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  TAB SWITCH
+  // ══════════════════════════════════════════════════════
+  function switchTab(tab, btn) {
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('tab-'+tab).classList.add('active');
+    btn.classList.add('active');
+  }
+</script>
+</body>
+</html>
