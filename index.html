@@ -5,15 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Leave Tracker – Amazon GR Tech</title>
 
-  <!-- ══════════════════════════════════════════
-       FIREBASE SDK  (v9 compat mode)
-  ══════════════════════════════════════════ -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Segoe UI',sans-serif;background:#f0f4f8;color:#333}
+    body{font-family:'Segoe UI',sans-serif;background:#f0f4f8;color:#333;display:flex;flex-direction:column;min-height:100screen}
 
     /* NAV */
     header{background:linear-gradient(135deg,#1a237e,#283593);color:#fff;
@@ -26,14 +23,14 @@
     #conn-label{font-size:.8rem;opacity:.9}
 
     /* TABS */
-    .tabs{display:flex;background:#fff;border-bottom:2px solid #e0e0e0;padding:0 32px}
+    .tabs{display:flex;background:#fff;border-bottom:2px solid #e0e0e0;padding:0 32px;overflow-x:auto}
     .tab-btn{padding:14px 26px;border:none;background:none;font-size:.9rem;
              font-weight:600;color:#666;cursor:pointer;border-bottom:3px solid transparent;
-             transition:all .2s}
+             white-space:nowrap;transition:all .2s}
     .tab-btn.active{color:#1a237e;border-bottom:3px solid #1a237e}
 
     /* SECTIONS */
-    .section{display:none;padding:28px 32px}
+    .section{display:none;padding:28px 32px;flex:1}
     .section.active{display:block}
 
     /* CARDS */
@@ -67,13 +64,15 @@
     tbody tr:hover{background:#f5f7ff}
     td{padding:10px 13px}
 
+    /* BADGES */
     .badge{display:inline-block;padding:3px 10px;border-radius:20px;
            font-size:.72rem;font-weight:700}
-    .b-Sick      {background:#fce4ec;color:#c62828}
-    .b-Casual    {background:#fff3e0;color:#e65100}
-    .b-Vacation  {background:#e8f5e9;color:#2e7d32}
-    .b-Personal  {background:#e3f2fd;color:#1565c0}
-    .b-Emergency {background:#f3e5f5;color:#6a1b9a}
+    .b-Sick       {background:#fce4ec;color:#c62828}
+    .b-Casual     {background:#fff3e0;color:#e65100}
+    .b-Annual     {background:#e8f5e9;color:#2e7d32}
+    .b-ML-Sick    {background:#f3e5f5;color:#6a1b9a}
+    .b-Mandatory  {background:#e3f2fd;color:#1565c0}
+    .b-Optional   {background:#e0f7fa;color:#006064}
 
     .btn-del{background:none;border:none;color:#e53935;cursor:pointer;
              font-size:.95rem;padding:2px 7px;border-radius:4px;transition:background .15s}
@@ -82,14 +81,15 @@
     tfoot tr td{font-weight:700;color:#1a237e;background:#e8eaf6;font-size:.88rem}
 
     /* DASHBOARD */
-    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
               gap:16px;margin-bottom:22px}
     .kpi{background:#fff;border-radius:12px;padding:18px 20px;
          box-shadow:0 2px 10px rgba(0,0,0,.07);border-top:4px solid;text-align:center}
     .kpi.c1{border-color:#1a237e}.kpi.c2{border-color:#c62828}
     .kpi.c3{border-color:#e65100}.kpi.c4{border-color:#2e7d32}
-    .kpi.c5{border-color:#6a1b9a}.kpi.c6{border-color:#00838f}
-    .kpi-num{font-size:2rem;font-weight:800;color:#1a237e;line-height:1;margin-bottom:5px}
+    .kpi.c5{border-color:#6a1b9a}.kpi.c6{border-color:#1565c0}
+    .kpi.c7{border-color:#006064}.kpi.c8{border-color:#00838f}
+    .kpi-num{font-size:1.8rem;font-weight:800;color:#1a237e;line-height:1;margin-bottom:5px}
     .kpi-lbl{font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;
              color:#666;font-weight:600}
 
@@ -141,25 +141,24 @@
 </head>
 <body>
 
-<!-- ══ HEADER ══ -->
 <header>
-  <h1>🗓️ Leave Tracker &nbsp;<span style="font-size:.8rem;opacity:.7">| Amazon GR Tech</span></h1>
+  <div>
+    <h1 style="display: inline-block; margin:0;">🗓️ Leave Tracker <span style="font-size:.8rem; opacity:.7; font-weight: normal;">| Amazon GR Tech</span></h1>
+    <p style="font-size: 0.68rem; opacity: 0.6; margin-top: 2px; letter-spacing: 0.5px;">Engineered by Ruthwick Kalahasti</p>
+  </div>
   <div>
     <span class="conn-dot" id="conn-dot"></span>
     <span id="conn-label">Connecting...</span>
   </div>
 </header>
 
-<!-- ══ TABS ══ -->
 <div class="tabs">
   <button class="tab-btn active" onclick="switchTab('entry',this)">📝 Leave Entry</button>
   <button class="tab-btn"        onclick="switchTab('records',this)">📋 All Records</button>
+  <button class="tab-btn"        onclick="switchTab('monthly',this)">📅 Monthly View</button>
   <button class="tab-btn"        onclick="switchTab('dashboard',this)">📊 Manager Dashboard</button>
 </div>
 
-<!-- ════════════════════════════════════════════
-     TAB 1 — LEAVE ENTRY
-════════════════════════════════════════════ -->
 <div id="tab-entry" class="section active">
 
   <div class="card">
@@ -175,9 +174,10 @@
           <option value="">-- Select Type --</option>
           <option>Sick</option>
           <option>Casual</option>
-          <option>Vacation</option>
-          <option>Personal</option>
-          <option>Emergency</option>
+          <option>Annual</option>
+          <option>ML(Sick)</option>
+          <option>Mandatory</option>
+          <option>Optional</option>
         </select>
       </div>
       <div class="fg">
@@ -230,9 +230,6 @@
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════
-     TAB 2 — ALL RECORDS
-════════════════════════════════════════════ -->
 <div id="tab-records" class="section">
   <div class="card">
     <h2>📋 All Leave Records</h2>
@@ -245,8 +242,8 @@
       <select id="fa-type" onchange="renderAllTable()">
         <option value="">All Types</option>
         <option>Sick</option><option>Casual</option>
-        <option>Vacation</option><option>Personal</option>
-        <option>Emergency</option>
+        <option>Annual</option><option>ML(Sick)</option>
+        <option>Mandatory</option><option>Optional</option>
       </select>
     </div>
     <div class="tbl-wrap">
@@ -264,22 +261,60 @@
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════
-     TAB 3 — MANAGER DASHBOARD
-════════════════════════════════════════════ -->
+<div id="tab-monthly" class="section">
+  <div class="card">
+    <h2>📅 Monthly Summary Logs</h2>
+    <div class="frow">
+      <label>Select Target Month:</label>
+      <select id="fm-month" onchange="renderMonthlyTable()">
+        <option value="0">January</option>
+        <option value="1">February</option>
+        <option value="2">March</option>
+        <option value="3">April</option>
+        <option value="4">May</option>
+        <option value="5">June</option>
+        <option value="6">July</option>
+        <option value="7">August</option>
+        <option value="8">September</option>
+        <option value="9">October</option>
+        <option value="10">November</option>
+        <option value="11">December</option>
+      </select>
+      <label>Select Year:</label>
+      <select id="fm-year" onchange="renderMonthlyTable()">
+        <option value="2026">2026</option>
+        <option value="2025">2025</option>
+        <option value="2027">2027</option>
+      </select>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Auditor</th><th>Leave Type</th>
+            <th>Start Date</th><th>End Date</th><th>Logged Days</th><th>Reason</th>
+          </tr>
+        </thead>
+        <tbody id="monthly-tbody"></tbody>
+        <tfoot id="monthly-tfoot"></tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
 <div id="tab-dashboard" class="section">
 
-  <!-- KPI CARDS -->
   <div class="kpi-grid">
     <div class="kpi c1"><div class="kpi-num" id="k-total">—</div><div class="kpi-lbl">Total Leave Days</div></div>
-    <div class="kpi c2"><div class="kpi-num" id="k-sick">—</div><div class="kpi-lbl">Sick Leaves</div></div>
-    <div class="kpi c3"><div class="kpi-num" id="k-casual">—</div><div class="kpi-lbl">Casual Leaves</div></div>
-    <div class="kpi c4"><div class="kpi-num" id="k-vac">—</div><div class="kpi-lbl">Vacations</div></div>
-    <div class="kpi c5"><div class="kpi-num" id="k-emg">—</div><div class="kpi-lbl">Emergency</div></div>
-    <div class="kpi c6"><div class="kpi-num" id="k-aud">—</div><div class="kpi-lbl">Auditors Tracked</div></div>
+    <div class="kpi c2"><div class="kpi-num" id="k-sick">—</div><div class="kpi-lbl">Sick</div></div>
+    <div class="kpi c3"><div class="kpi-num" id="k-casual">—</div><div class="kpi-lbl">Casual</div></div>
+    <div class="kpi c4"><div class="kpi-num" id="k-ann">—</div><div class="kpi-lbl">Annual</div></div>
+    <div class="kpi c5"><div class="kpi-num" id="k-mls">—</div><div class="kpi-lbl">ML(Sick)</div></div>
+    <div class="kpi c6"><div class="kpi-num" id="k-man">—</div><div class="kpi-lbl">Mandatory</div></div>
+    <div class="kpi c7"><div class="kpi-num" id="k-opt">—</div><div class="kpi-lbl">Optional</div></div>
+    <div class="kpi c8"><div class="kpi-num" id="k-aud">—</div><div class="kpi-lbl">Auditors Tracked</div></div>
   </div>
 
-  <!-- BAR CHART -->
   <div class="card">
     <h2>📊 Leave Days per Auditor</h2>
     <div class="chart-outer">
@@ -289,7 +324,6 @@
     </div>
   </div>
 
-  <!-- SUMMARY TABLE -->
   <div class="card">
     <h2>👥 Auditor-wise Summary</h2>
     <div class="tbl-wrap">
@@ -297,43 +331,50 @@
         <thead>
           <tr>
             <th>#</th><th>Auditor</th>
-            <th>Sick</th><th>Casual</th><th>Vacation</th>
-            <th>Personal</th><th>Emergency</th>
+            <th>Sick</th><th>Casual</th><th>Annual</th>
+            <th>ML(Sick)</th><th>Mandatory</th><th>Optional</th>
             <th>Total</th><th>Progress (max 30 days)</th>
           </tr>
         </thead>
         <tbody id="sum-tbody">
-          <tr><td colspan="9" class="no-data">Loading...</td></tr>
+          <tr><td colspan="10" class="no-data">Loading...</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 </div>
 
-<!-- TOAST -->
 <div id="toast"></div>
 
-<!-- ════════════════════════════════════════════
-     FIREBASE CONFIG — PASTE YOUR KEYS BELOW
-════════════════════════════════════════════ -->
+<footer style="text-align: center; padding: 20px; font-size: 0.8rem; color: #666; background: #fff; border-top: 1px solid #e0e0e0; margin-top: 40px;">
+  <p>&copy; 2026 Leave Tracker Portal. Designed & Developed by <strong>K. Ruthwick Sai</strong>. All Rights Reserved.</p>
+</footer>
+
 <script>
   // ┌─────────────────────────────────────────────────────┐
   // │  🔥 REPLACE THIS BLOCK WITH YOUR FIREBASE CONFIG   │
   // └─────────────────────────────────────────────────────┘
   const firebaseConfig = {
-        apiKey: "AIzaSyAKTR8O8B23Jk5r_e9nvGvbUmftTS_pavw",
-        authDomain: "leave-tracker-6111d.firebaseapp.com",
-        databaseURL: "https://leave-tracker-6111d-default-rtdb.firebaseio.com",
-        projectId: "leave-tracker-6111d",
-        storageBucket: "leave-tracker-6111d.firebasestorage.app",
-        messagingSenderId: "1018389236658",
-        appId: "1:1018389236658:web:9114393f18bf2f96e932ab"
+    apiKey:            "PASTE_YOUR_API_KEY_HERE",
+    authDomain:        "PASTE_YOUR_AUTH_DOMAIN_HERE",
+    databaseURL:       "PASTE_YOUR_DATABASE_URL_HERE",
+    projectId:         "PASTE_YOUR_PROJECT_ID_HERE",
+    storageBucket:     "PASTE_YOUR_STORAGE_BUCKET_HERE",
+    messagingSenderId: "PASTE_YOUR_SENDER_ID_HERE",
+    appId:             "PASTE_YOUR_APP_ID_HERE"
   };
 
   // ── INIT FIREBASE ──────────────────────────────────────
   firebase.initializeApp(firebaseConfig);
   const db       = firebase.database();
   const leavesRef = db.ref('leaves');
+
+  // Set current month/year defaults dynamically inside selects
+  window.addEventListener('DOMContentLoaded', () => {
+    const today = new Date();
+    document.getElementById('fm-month').value = today.getMonth();
+    document.getElementById('fm-year').value = today.getFullYear();
+  });
 
   // ── CONNECTION STATUS ──────────────────────────────────
   db.ref('.info/connected').on('value', snap => {
@@ -345,14 +386,14 @@
   // ══════════════════════════════════════════════════════
   //  DATA CACHE  (kept in memory, synced from Firebase)
   // ══════════════════════════════════════════════════════
-  let leaves = {};   // { firebaseKey: {name,type,start,end,reason} }
+  let leaves = {};   
 
-  // Real-time listener — fires on EVERY change from ANY user
   leavesRef.on('value', snapshot => {
     leaves = snapshot.val() || {};
     refreshDropdowns();
     renderEntryTable();
     renderAllTable();
+    renderMonthlyTable();
     renderDashboard();
   });
 
@@ -367,12 +408,12 @@
 
   function fmt(d) {
     if (!d) return '';
-    return new Date(d).toLocaleDateString('en-GB',
-      {day:'2-digit',month:'short',year:'numeric'});
+    return new Date(d).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'});
   }
 
   function badge(type) {
-    return `<span class="badge b-${type}">${type}</span>`;
+    let normalized = type ? type.replace('(', '-').replace(')', '') : 'Casual';
+    return `<span class="badge b-${normalized}">${type}</span>`;
   }
 
   function leavesArray() {
@@ -395,6 +436,7 @@
     const auds = getAuditors();
     ['fe-auditor','fa-auditor'].forEach(id => {
       const sel = document.getElementById(id);
+      if(!sel) return;
       const cur = sel.value;
       sel.innerHTML = `<option value="">All${id==='fe-auditor'?' Auditors':''}</option>`;
       auds.forEach(a => {
@@ -427,7 +469,6 @@
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span> Saving…';
 
-    // PUSH to Firebase (auto-generates unique key)
     leavesRef.push({
       name, type, start, end,
       reason: reason || '',
@@ -538,10 +579,59 @@
   }
 
   // ══════════════════════════════════════════════════════
+  //  RENDER — NEW MONTHLY FILTER TABLES
+  // ══════════════════════════════════════════════════════
+  function renderMonthlyTable() {
+    const selMonth = parseInt(document.getElementById('fm-month').value);
+    const selYear = parseInt(document.getElementById('fm-year').value);
+    
+    let data = leavesArray();
+    
+    // Filter records if they overlap or touch the selected month view
+    let monthlyData = data.filter(l => {
+      const startD = new Date(l.start);
+      const endD = new Date(l.end);
+      return (startD.getMonth() === selMonth && startD.getFullYear() === selYear) ||
+             (endD.getMonth() === selMonth && endD.getFullYear() === selYear);
+    });
+
+    monthlyData.sort((a,b) => new Date(a.start) - new Date(b.start));
+    
+    const tbody = document.getElementById('monthly-tbody');
+    const tfoot = document.getElementById('monthly-tfoot');
+
+    if (monthlyData.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" class="no-data">No leave items recorded during this month.</td></tr>`;
+      tfoot.innerHTML = '';
+      return;
+    }
+
+    let monthlyTotalDays = 0;
+    tbody.innerHTML = monthlyData.map((l,i) => {
+      const d = countDays(l.start, l.end);
+      monthlyTotalDays += d;
+      return `<tr>
+        <td>${i+1}</td>
+        <td><strong>${l.name}</strong></td>
+        <td>${badge(l.type)}</td>
+        <td>${fmt(l.start)}</td>
+        <td>${fmt(l.end)}</td>
+        <td><strong>${d} Days</strong></td>
+        <td>${l.reason || '—'}</td>
+      </tr>`;
+    }).join('');
+
+    tfoot.innerHTML = `<tr>
+      <td colspan="5" style="text-align:right;padding-right:14px">📌 Target Month Accumulated Volume:</td>
+      <td colspan="2"><strong>${monthlyTotalDays} Days Tracked</strong></td>
+    </tr>`;
+  }
+
+  // ══════════════════════════════════════════════════════
   //  RENDER — MANAGER DASHBOARD
   // ══════════════════════════════════════════════════════
   function renderDashboard() {
-    const types    = ['Sick','Casual','Vacation','Personal','Emergency'];
+    const types    = ['Sick','Casual','Annual','ML(Sick)','Mandatory','Optional'];
     const auditors = getAuditors();
     const all      = leavesArray();
 
@@ -550,8 +640,10 @@
     document.getElementById('k-total').textContent  = all.reduce((s,l)=>s+countDays(l.start,l.end),0);
     document.getElementById('k-sick').textContent   = sum('Sick');
     document.getElementById('k-casual').textContent = sum('Casual');
-    document.getElementById('k-vac').textContent    = sum('Vacation');
-    document.getElementById('k-emg').textContent    = sum('Emergency');
+    document.getElementById('k-ann').textContent    = sum('Annual');
+    document.getElementById('k-mls').textContent    = sum('ML(Sick)');
+    document.getElementById('k-man').textContent    = sum('Mandatory');
+    document.getElementById('k-opt').textContent    = sum('Optional');
     document.getElementById('k-aud').textContent    = auditors.length;
 
     // BAR CHART
@@ -575,7 +667,7 @@
     // SUMMARY TABLE
     const tbody = document.getElementById('sum-tbody');
     if (auditors.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="9" class="no-data">No leave data yet.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="10" class="no-data">No leave data yet.</td></tr>`;
       return;
     }
 
@@ -592,9 +684,10 @@
         <td><strong>${a}</strong></td>
         <td>${byType['Sick']}</td>
         <td>${byType['Casual']}</td>
-        <td>${byType['Vacation']}</td>
-        <td>${byType['Personal']}</td>
-        <td>${byType['Emergency']}</td>
+        <td>${byType['Annual']}</td>
+        <td>${byType['ML(Sick)']}</td>
+        <td>${byType['Mandatory']}</td>
+        <td>${byType['Optional']}</td>
         <td><strong>${tot}</strong></td>
         <td style="min-width:140px">
           <div class="prog-wrap"><div class="prog-bar" style="width:${pct}%"></div></div>
@@ -602,7 +695,7 @@
         </td>
       </tr>`;
     }).join('') + `<tr>
-      <td colspan="7" style="text-align:right;font-weight:700;background:#e8eaf6;color:#1a237e;padding-right:14px">
+      <td colspan="8" style="text-align:right;font-weight:700;background:#e8eaf6;color:#1a237e;padding-right:14px">
         📌 Grand Total:
       </td>
       <td colspan="2" style="font-weight:700;background:#e8eaf6;color:#1a237e">
@@ -619,10 +712,10 @@
     document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
     document.getElementById('tab-'+tab).classList.add('active');
     btn.classList.add('active');
+    
+    // Explicit call to handle cross-renders safely
+    if(tab === 'monthly') renderMonthlyTable();
   }
 </script>
-  <footer style="text-align: center; padding: 20px; font-size: 0.8rem; color: #666; background: #fff; border-top: 1px solid #e0e0e0; margin-top: 40px;">
-  <p>&copy; 2026 Leave Tracker Portal. Designed & Developed by <strong>Ruthwick kalahasti</strong>. All Rights Reserved.</p>
-</footer>
 </body>
 </html>
